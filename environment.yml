@@ -1,0 +1,13 @@
+name: it2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - pip:
+      - ifcopenshell>=0.8.0,<0.9
+      - streamlit>=1.50

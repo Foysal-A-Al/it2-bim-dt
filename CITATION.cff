@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+title: "IT2: Identity and topology integrity checks for BIM-based digital twins"
+version: 1.0.0
+date-released: 2026-09-28
+authors:
+  - given-names: Foysal
+    family-names: "TODO"
+    affiliation: "TODO"
+license: MIT
+repository-code: "https://github.com/TODO/it2-bim-dt"
