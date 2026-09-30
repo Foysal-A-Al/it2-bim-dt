@@ -1,6 +1,7 @@
 """Figure provenance and protected experiment execution; paper snapshot stays untouched."""
 import datetime as dt
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -60,8 +61,11 @@ label = st.selectbox("Reproduction scope", list(choices))
 st.caption("Rendering does not validate experiments. Fingerprint mode recalculates identity, sensitivity, binding validity and round-trip evaluation, but reuses saved fingerprints and file-level round-trip records. Raw mode includes downloads, geometry extraction and new file-level revisions, and can take substantially longer.")
 active = st.session_state.get("it2_reproduction")
 running = active is not None and active["process"].poll() is None
+public_demo = os.environ.get("IT2_PUBLIC_DEMO") == "1"
+if public_demo:
+    st.info("This public demo shows provenance and the checker. Run the reproduction commands on your own machine to recalculate the study.")
 # The experiment runs in a child process so the app stays responsive.
-if st.button("Run selected stages in a separate folder", type="primary", disabled=running):
+if st.button("Run selected stages in a separate folder", type="primary", disabled=running or public_demo):
     output = ROOT.parent / "it2-reproduction" / dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     output.parent.mkdir(parents=True, exist_ok=True)
     log_path = output.parent / (output.name + ".log")

@@ -65,6 +65,14 @@ python data/download.py
 streamlit run app/app.py
 ```
 
+## Docker and online demos
+
+```bash
+docker compose up -d --build
+```
+
+Open **http://localhost:8503**. Docker downloads the seven study models into a separate volume; the original paper outputs remain unchanged. To create a temporary public demo, run `docker compose --profile share up -d share` and read the generated URL with `docker compose logs share`. The link requires the host to remain online. See [DOCKER.md](DOCKER.md) for lifecycle, reproduction and permanent-hosting details.
+
 ## Method
 
 **Topology.** Distribution elements form graph nodes. IFC port ownership and `IfcRelConnectsPorts` form undirected edges. Connected-component traversal includes isolated elements. System membership is measured independently of this graph.
