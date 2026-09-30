@@ -1,4 +1,5 @@
 import json, pathlib, sys
+# Resolve paths from the script location, so imports do not depend on the terminal directory.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 IFC = ROOT / "data" / "ifc"

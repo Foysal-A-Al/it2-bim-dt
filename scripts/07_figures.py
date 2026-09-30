@@ -69,6 +69,7 @@ ax.legend(handles=[Patch(fc='white',ec=GR,label='standard reused (IDS)'),Patch(f
 plt.savefig(O+'f3_protocol.png',bbox_inches='tight'); plt.close()
 
 # ---- Fig 4 quadrant
+# Experimental panels read saved JSON outputs; conceptual panels above are authored diagrams.
 T=json.load(open(RES/'topology.json'))
 NAMES={'Simple-Scene_Building-Hvac_IFC4X3.ifc':'Simple-Scene HVAC','Simple-Scene_Infra-Plumbing_IFC4X3.ifc':'Simple-Scene Plumbing',
  'Duplex_MEP_20110907.ifc':'Duplex MEP','Duplex_Electrical_20121207.ifc':'Duplex Electrical','Duplex_Plumbing_20121113.ifc':'Duplex Plumbing',
@@ -92,6 +93,7 @@ ax.legend(handles=[Patch(fc='white',ec=GR,label='buildingSMART sample'),Patch(fc
 plt.savefig(O+'f4_quadrant.png',bbox_inches='tight'); plt.close()
 
 # ---- Fig 5 recall vs recreated, three models
+# Plot the mean and bootstrap endpoints saved by the identity experiment.
 rs=['0.0','0.1','0.2','0.3','0.5']
 fig,ax=plt.subplots(figsize=(5.0,3.3))
 for fn,ls,lab in [('Clinic_HVAC','-','Clinic HVAC'),('Duplex_Plumbing_20121113','--','Duplex Plumbing'),('Duplex_MEP_20110907',':','Duplex MEP')]:
@@ -109,6 +111,7 @@ ax.legend(handles=[Line2D([],[],color=K,ls='-',label='Clinic HVAC (3,704)'),Line
 plt.savefig(O+'f5_recall.png',bbox_inches='tight'); plt.close()
 
 # ---- Fig 6 sensitivity heatmaps
+# Each heatmap cell is mean F1, not an individual run or a confidence interval.
 fig,axs=plt.subplots(1,2,figsize=(6.8,2.7))
 lams=['0','0.15','0.3','0.6','1.0']; taus=['0.25','0.5','1.0','2.0']
 for ax,(fn,tt) in zip(axs,[('Clinic_HVAC','(a) Clinic HVAC'),('Duplex_Plumbing_20121113','(b) Duplex Plumbing')]):

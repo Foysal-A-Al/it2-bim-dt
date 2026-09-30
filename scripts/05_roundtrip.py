@@ -11,6 +11,7 @@ src = IFC / f"{model}.ifc"
 orig_path = FEAT / f"{model}.json"
 if not orig_path.exists():
     dump(extract_features(ifcopenshell.open(str(src))), orig_path)
+# Read a real IFC, then perturb its entities rather than only its fingerprint vectors.
 f = ifcopenshell.open(str(src))
 unit = 1.0 / uu.calculate_unit_scale(f)        # metres -> file units
 rng = np.random.default_rng(seed)
@@ -18,6 +19,7 @@ truth, dele = {}, []
 for e in f.by_type("IfcDistributionElement"):
     if rng.random() < 0.05:
         dele.append(e); continue
+    # Keep the old ID as truth before assigning a fresh, valid IFC GlobalId.
     old = e.GlobalId
     e.GlobalId = ifcopenshell.guid.new()
     truth[e.GlobalId] = old
@@ -27,11 +29,14 @@ for e in f.by_type("IfcDistributionElement"):
     if rng.random() < mv:                                  # moved in plan, own placement only
         d = rng.normal(0, sig, 2) * unit
         ax = f.createIfcAxis2Placement3D(f.createIfcCartesianPoint((float(d[0]), float(d[1]), 0.0)), None, None)
+        # Add a child placement, preserving the existing placement as its parent.
         e.ObjectPlacement = f.createIfcLocalPlacement(e.ObjectPlacement, ax)
+# Remove deleted products through the IFC API so related entities are handled consistently.
 for e in dele:
     ifcopenshell.api.run("root.remove_product", f, product=e)
 tmp = pathlib.Path("/tmp") / f"rt_{model}_{seed}.ifc"
 f.write(str(tmp))
+# Re-open the written IFC and independently extract geometry for the file-level check.
 new = extract_features(ifcopenshell.open(str(tmp)))
 dump({"new": new, "truth": truth, "config": dict(seed=seed, r=r, move=mv, sigma=sig)},
      RES / f"roundtrip_{model}_{seed}_{r}_{mv}_{sig}.json")

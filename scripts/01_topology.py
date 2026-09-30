@@ -3,6 +3,7 @@ from _common import IFC, RES, dump
 from it2.topology import topology_metrics
 
 rows = []
+# Audit the available IFC files in deterministic filename order.
 for p in sorted(IFC.glob("*.ifc")):
     m = topology_metrics(str(p))
     rows.append(m)

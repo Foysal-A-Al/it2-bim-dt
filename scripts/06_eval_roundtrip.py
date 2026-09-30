@@ -13,6 +13,7 @@ for model in ["Duplex_Plumbing_20121113"]:
     for p in sorted(RES.glob(f"roundtrip_{model}_*.json")):
         d = json.load(open(p)); c = d["config"]
         N = load_features(d["new"])
+        # Convert stored GlobalId truth to the index-based truth expected by score().
         truth = {j: gi[d["truth"][x["g"]]] for j, x in enumerate(N) if d["truth"].get(x["g"]) in gi}
         cfg = f"{c['r']}_{c['move']}_{c['sigma']}"
         for name, fn in METHODS.items():
@@ -22,6 +23,7 @@ for model in ["Duplex_Plumbing_20121113"]:
         r, mv, sg = map(float, cfg.split("_"))
         S = collections.defaultdict(list)
         for s in range(20):
+            # No decoy additions here: the file-level round trip only deletes/moves/recreates.
             new, truth = perturb(O, np.random.default_rng(300 + s), r, move=mv, sigma=sg, add=0)
             for name, fn in METHODS.items():
                 S[name].append(score(fn(O, new), truth))

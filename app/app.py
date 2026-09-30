@@ -43,6 +43,7 @@ def save_upload(upload):
 
 def pick_model(label, key):
     """Either upload an IFC file or choose one of the study models if they were downloaded."""
+    # Users can inspect their own IFC or a downloaded study model with the same audit code.
     local = sorted(p.name for p in IFC_DIR.glob("*.ifc")) if IFC_DIR.exists() else []
     choice = st.radio(label, ["Upload a file"] + (["Use a study model"] if local else []), horizontal=True, key=key + "_mode")
     if choice == "Use a study model":
@@ -53,6 +54,7 @@ def pick_model(label, key):
 
 
 @st.cache_data(show_spinner=False)
+# Cache results by path. Clear the Streamlit cache if a file is replaced at the same path.
 def cached_topology(path, _mtime):
     return topology_metrics(path), topology_details(path)
 
@@ -89,6 +91,7 @@ with tab_topo:
                 st.error(f"Could not read this file as IFC: {ex}")
                 st.stop()
         df = pd.DataFrame(rows)
+        # These are user-selected operational thresholds, not universal engineering criteria.
         ok = m["PC"] >= pc_min and m["LC"] >= lc_min
         verdict(ok, f"PC = {m['PC']:.2f} (needs {pc_min:.2f}), LC = {m['LC']:.2f} (needs {lc_min:.2f}).")
         k = st.columns(6)
@@ -165,6 +168,7 @@ with tab_id:
             for x in new:                      # a revision regenerates GlobalIds
                 x["g"] = "new-" + str(id(x))
     if old is not None and new is not None:
+        # Record how each correspondence was recovered so users can inspect the mapping.
         pairs, stage = reconcile(old, new, lam, tau)
         n_g = sum(v == "globalid" for v in stage.values()); n_t = sum(v == "tag" for v in stage.values())
         n_geo = sum(v == "geometry" for v in stage.values())
@@ -202,6 +206,7 @@ with tab_id:
 # ---------------------------------------------------------------- study
 with tab_study:
     st.subheader("Results of the controlled study")
+    # This tab presents the saved paper snapshot; selecting a model does not rerun the study.
     res = ROOT / "results"; figs = ROOT / "figures"
     if (res / "topology.json").exists():
         t = pd.DataFrame(json.load(open(res / "topology.json")))[["file", "exporter", "D", "PC", "components", "LC", "SM"]]

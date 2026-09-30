@@ -9,8 +9,10 @@ import ifcopenshell
 
 def _ports_of(element):
     ports = []
+    # IFC2x3 attaches ports through port-to-element relations.
     for rel in getattr(element, "HasPorts", None) or []:      # IFC2x3
         ports.append(rel.RelatingPort)
+    # IFC4/4.3 commonly nests ports under their owning distribution element.
     for rel in getattr(element, "IsNestedBy", None) or []:    # IFC4 and later
         ports += [o for o in rel.RelatedObjects if o.is_a("IfcPort")]
     return ports
@@ -24,6 +26,7 @@ def topology_metrics(path):
         raise ValueError(f"{path}: no IfcDistributionElement instances")
     ids = {e.id() for e in D}
 
+    # Map each port ID to its owning element ID; the graph nodes are elements, not ports.
     owner, with_ports = {}, 0
     for e in D:
         ps = _ports_of(e)
@@ -34,14 +37,17 @@ def topology_metrics(path):
     ports = f.by_type("IfcPort")
     connected_ports = set()
     adj = collections.defaultdict(set)
+    # Trust exported connection relations. This audit does not infer edges from proximity.
     for rel in f.by_type("IfcRelConnectsPorts"):
         a, b = rel.RelatingPort.id(), rel.RelatedPort.id()
         connected_ports |= {a, b}
         oa, ob = owner.get(a), owner.get(b)
         if oa and ob and oa != ob:
+            # Undirected edges measure structural reachability, not flow direction.
             adj[oa].add(ob)
             adj[ob].add(oa)
 
+    # Traverse every node, including isolates. Each traversal yields one connected component.
     seen, sizes = set(), []
     for e in D:
         if e.id() in seen:
@@ -56,12 +62,15 @@ def topology_metrics(path):
             stack += list(adj[x])
         sizes.append(n)
 
+    # Named-system membership is counted independently from graph connectivity.
     in_system = set()
     for g in f.by_type("IfcSystem"):
         for rel in g.IsGroupedBy or []:
             in_system |= {o.id() for o in rel.RelatedObjects}
 
     header = f.header.file_name
+    # Normalize coverage/component size by the distribution-element count.
+    # Many components can represent legitimate separate systems; context matters.
     return dict(
         file=path.split("/")[-1],
         schema=f.schema,
@@ -92,11 +101,14 @@ def topology_details(path):
         for p in ps:
             owner[p.id()] = e.id()
     adj = collections.defaultdict(set)
+    # Trust exported connection relations. This audit does not infer edges from proximity.
     for rel in f.by_type("IfcRelConnectsPorts"):
         oa, ob = owner.get(rel.RelatingPort.id()), owner.get(rel.RelatedPort.id())
         if oa and ob and oa != ob:
+            # Undirected edges measure structural reachability, not flow direction.
             adj[oa].add(ob)
             adj[ob].add(oa)
+    # Retain a component label per element so the app can explain the aggregate metrics.
     comp, sizes, cid = {}, {}, 0
     for e in D:
         if e.id() in comp:
@@ -111,6 +123,7 @@ def topology_details(path):
             stack += list(adj[x])
         sizes[cid] = len(members)
         cid += 1
+    # Named-system membership is counted independently from graph connectivity.
     in_system = set()
     for g in f.by_type("IfcSystem"):
         for rel in g.IsGroupedBy or []:

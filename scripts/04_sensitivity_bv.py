@@ -18,14 +18,19 @@ for m in sys.argv[1:] or ["Clinic_HVAC", "Duplex_Plumbing_20121113"]:
                  for new, truth in (perturb(X, np.random.default_rng(100 + s), 1.0, move=0.3, sigma=0.3) for s in range(5))]
             out["grid"][f"{lam}|{tau}"] = np.mean(F, 0).tolist()
             print(m, lam, tau, np.round(np.mean(F, 0), 3))
+    # Treat equipment classes as hypothetical bound assets; there is no live BMS point list.
     bound = [i for i, x in enumerate(X) if x["cls"] in EQUIPMENT]
     B = collections.defaultdict(list)
     for s in range(20):
         new, truth = perturb(X, np.random.default_rng(200 + s), 0.3)
+        # Invert ground truth to find the surviving counterpart of each old bound element.
         inv = {i: j for j, i in truth.items()}
         alive = [i for i in bound if i in inv]
+        # The GUID baseline encodes the assumption that every GlobalId is regenerated.
+        # It intentionally predicts no recovered bindings; it is not an actual GUID lookup.
         for name, fn in [("guid", lambda a, b: []), ("tag", match_tag), ("placement", match_placement), ("hybrid", match_hybrid)]:
             mp = dict(fn(X, new))
+            # Evaluate correct and wrong links only among bindings whose assets survive.
             B[name].append((sum(mp.get(i) == inv[i] for i in alive) / len(alive),
                             sum(i in mp and mp[i] != inv[i] for i in alive) / len(alive)))
     out["bound_elements"] = len(bound)

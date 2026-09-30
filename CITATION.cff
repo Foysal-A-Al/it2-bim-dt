@@ -1,11 +1,17 @@
 cff-version: 1.2.0
-message: "If you use this code, please cite it as below."
+message: "If you use this research code, please cite this repository."
 title: "IT2: Identity and topology integrity checks for BIM-based digital twins"
 version: 1.0.0
 date-released: 2026-09-28
 authors:
-  - given-names: Foysal
-    family-names: "TODO"
-    affiliation: "TODO"
+  - given-names: "Abdullah Al"
+    family-names: "Foysal"
 license: MIT
-repository-code: "https://github.com/TODO/it2-bim-dt"
+repository-code: "https://github.com/Foysal-A-Al/it2-bim-dt"
+url: "https://github.com/Foysal-A-Al/it2-bim-dt"
+keywords:
+  - BIM
+  - IFC
+  - digital twins
+  - identity reconciliation
+  - topology integrity

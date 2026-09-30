@@ -1,159 +1,145 @@
-# IT2: identity and topology integrity for BIM-based digital twins
+# IT2 · Identity and Topology Integrity for BIM-Based Digital Twins
 
-Code, data pointers, results and figures for the paper
-**"Identity and Topology Integrity as a Precondition for BIM-Based Digital Twins: A Controlled Study on Real MEP Models."**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](environment.yml)
 
-A digital twin built on BIM assumes two things that are rarely checked. Elements keep their identity when the model is revised, and the ducts, pipes and equipment in the model are actually connected. This repository measures both on open IFC models and tests a two-stage matcher that recovers element identity after GlobalIds are lost.
+**Research repository maintained by Abdullah Al Foysal.**
 
-## The IT2 checker app
+IT2 examines two assumptions behind a BIM-based digital twin: elements remain identifiable after a model revision, and the exported distribution network contains usable connections. It provides a Python library, controlled experiments on public IFC models, paper outputs and a local Streamlit checker.
 
-A desktop app (runs in your browser, on your machine) built on the same code as the paper.
+Paper represented by this repository: **“Identity and Topology Integrity as a Precondition for BIM-Based Digital Twins: A Controlled Study on Real MEP Models.”**
 
-- **Topology check:** load one IFC model and see whether its distribution network is connected, with a pass or fail gate, the network pieces, and a list of disconnected elements.
-- **Identity check:** load two versions of a model and see which elements kept their GlobalId, which were re-linked by Tag or by geometry, and which go to manual review. Or test one model against a simulated revision, with precision and recall against the known truth.
-- **Study results:** the tables and figures of the paper.
+[Get started](#get-started-on-windows) · [Understand the method](#method) · [Reproduce the study](REPRODUCIBILITY.md) · [Inspect the source](it2/) · [Cite the code](CITATION.cff)
 
-### Windows with Anaconda
+![Topology audit: system membership versus port coverage on the seven study models](figures/f4_quadrant.png)
 
-Open the **Anaconda Prompt**, go to the unzipped folder, and run:
+*Named-system membership and exported port connectivity measure different properties. This figure is generated from `results/topology.json`; it is not a default illustration.*
+
+## What the checker does
+
+| View | Purpose | Evidence |
+| --- | --- | --- |
+| Topology check | Inspect port coverage, components, largest component and system membership | Calculated from the selected IFC |
+| Identity check | Reconcile two versions, or inspect a controlled simulated revision | GlobalId, Tag and geometry matching with a review queue |
+| Study results | Read the paper's saved tables and figures | The unchanged paper snapshot |
+| Reproduce the study | Inspect figure provenance and rerun selected stages | Separate outputs, execution logs and comparison reports |
+
+The checker runs locally in a browser. IFC files selected in the app are processed on the machine running Streamlit. Model files are excluded from Git; the included fingerprint tables and results are public research artifacts.
+
+## Get started on Windows
+
+Use **Anaconda Prompt**. The repository root is the folder containing `environment.yml` and `app/`; some ZIP extraction tools create an extra outer folder.
 
 ```bat
-cd path\to\it2-bim-dt
-setup_windows.bat        :: once: creates the conda environment "it2" and downloads the study models
-run_app_windows.bat      :: every time: opens the app in your browser
+git clone https://github.com/Foysal-A-Al/it2-bim-dt.git
+cd it2-bim-dt
+conda env create -f environment.yml
+conda activate it2
+python data\download.py
+streamlit run app\app.py
 ```
 
-The environment `it2` then also appears in Anaconda Navigator, where you can open Jupyter or Spyder on the project.
+Alternatively, from the repository root:
 
-### Mac or Linux
+```bat
+setup_windows.bat
+run_app_windows.bat
+```
+
+If IfcOpenShell installation fails, first capture the error. With `it2` activated, a wheel-only installation can be attempted without changing the repository:
+
+```bat
+python -m pip install --only-binary=:all: "ifcopenshell>=0.8.0,<0.9"
+```
+
+### PyCharm
+
+Choose the existing `it2` Conda interpreter. Create a Python run configuration with **module name** `streamlit`, parameters `run app/app.py`, and the repository root as the working directory. Use `--server.port 8502` if another instance already occupies 8501. Run Streamlit as a module; running `app.py` as an ordinary Python script does not start the server.
+
+### Linux / macOS
 
 ```bash
 conda env create -f environment.yml
-./run_app.sh
+conda activate it2
+python data/download.py
+streamlit run app/app.py
 ```
 
-### Put it on GitHub
+## Method
 
-Install [Git](https://git-scm.com) and the [GitHub CLI](https://cli.github.com), then from the Anaconda Prompt in this folder run `publish_to_github.bat`. It logs you in if needed, creates the public repository `it2-bim-dt` under your account and pushes everything. The IFC models are gitignored and are not uploaded.
+**Topology.** Distribution elements form graph nodes. IFC port ownership and `IfcRelConnectsPorts` form undirected edges. Connected-component traversal includes isolated elements. System membership is measured independently of this graph.
 
-## What is in here
+| Metric | Definition |
+| --- | --- |
+| PC | Elements with ports / distribution elements |
+| CC | Connected ports / all ports |
+| TF | Connected components / distribution elements |
+| LC | Elements in the largest component / distribution elements |
+| SM | Distribution elements assigned to an IFC system / distribution elements |
 
-```
-app/app.py               the IT2 checker app (Streamlit)
-it2/                     the library
-  topology.py            PC, CC, TF, LC, SM metrics from IFC port relations (IFC2x3 and IFC4)
-  features.py            fingerprints: class, container, Tag, type name, placement, world bounding box
-  matching.py            Tag key, placement baseline, IT2 hybrid matcher, revision simulator, scoring
-scripts/                 one script per section of the paper
-  01_topology.py         Section 5.2  topology audit of seven models
-  02_extract_features.py fingerprints for the three identity models
-  03_identity.py         Section 5.3  simulated revisions, 20 seeds, bootstrap CIs, Wilcoxon tests
-  04_sensitivity_bv.py   Sections 5.5 and 5.6  lambda x tau grid, simulated binding validity
-  05_roundtrip.py        Section 5.4  writes a perturbed IFC, re-opens and re-fingerprints it
-  06_eval_roundtrip.py   compares file-level and feature-level results
-  07_figures.py          all seven figures
-data/download.py         fetches the IFC models from the buildingSMART repositories
-data/features/           precomputed fingerprints (so steps 03 onwards run without the IFC files)
-results/                 every JSON result used in the paper
-figures/                 every figure used in the paper
-```
+**Identity.** The experimental hybrid matches exact `(class, Tag)` keys first, then uses Hungarian assignment within `(class, container)` partitions. The geometric cost is centre distance plus the L1 difference of sorted bounding-box dimensions, plus a type-name disagreement penalty weighted by lambda. Assigned pairs whose cost exceeds tau are rejected. The real-use `reconcile()` function additionally checks unchanged GlobalIds first.
 
-## Quick start
+The simulation uses real model fingerprints and controlled deletion, recreation, movement and decoy additions. Known correspondences make precision, recall and F1 inspectable. The comments in [`matching.py`](it2/matching.py), [`features.py`](it2/features.py) and [`topology.py`](it2/topology.py) explain the implementation and assumptions.
 
-```bash
-git clone https://github.com/TODO/it2-bim-dt.git
-cd it2-bim-dt
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+## Reproduce the study
+
+Open **Reproduce the study** in the app sidebar, or run:
+
+```bat
+run_reproduce_windows.bat figures
+run_reproduce_windows.bat saved-features
+run_reproduce_windows.bat raw-ifc
 ```
 
-or, with Anaconda: `conda env create -f environment.yml` and `conda activate it2`.
+| Scope | Recomputed | Reused |
+| --- | --- | --- |
+| `figures` | All seven figures | Saved numerical results |
+| `saved-features` | Identity, sensitivity, simulated binding validity, round-trip evaluation and figures | Fingerprints and file-level round-trip records |
+| `raw-ifc` | Downloads, topology, fingerprint extraction, experiments, file-level revisions, evaluation and figures | Existing downloads may be retained by the downloader |
 
-Regenerate the identity results and figures from the included fingerprints, in a few minutes and with no downloads:
+Every run writes to a new sibling `it2-reproduction/<timestamp>/` directory. Reports record package versions, commands, source/input hashes and comparisons. Numerical disagreements are reported; they never overwrite paper values. A figure-only run is a rendering check, not an experimental validation.
 
-```bash
-cd scripts
-python 03_identity.py
-python 04_sensitivity_bv.py
-python 06_eval_roundtrip.py
-python 07_figures.py
-```
+The protected runner adapts two paths only in its copied source for Windows: model basenames and the file-level temporary directory. The original scripts and paper files remain intact. The original `run_all.sh` is a Bash pipeline that writes into the repository; prefer the protected runner when preserving the paper snapshot.
 
-Reproduce everything from the raw IFC files (about 20 to 30 minutes, roughly 130 MB of downloads):
+See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for figure-by-figure provenance, experiment settings and limitations.
 
-```bash
-./run_all.sh
-```
+## Validation and interpretation
 
-Tested with Python 3.12.3, IfcOpenShell 0.8.5, NumPy 2.4.4, SciPy 1.17.1 and Matplotlib 3.10.8. All random seeds are fixed, so the numbers come out identical.
+The Windows installation and checker were verified with Python 3.11 and IfcOpenShell 0.8.5. A rerun from the supplied fingerprints reproduced all six recalculated result files at the runner's numerical tolerances. Figure regeneration completed; PNG byte hashes can differ across operating systems and rendering-library versions.
 
-## Data
+For `Duplex_Plumbing_20121113.ifc`, the topology view should display:
 
-| Model | Source repository | Exporter (from file header) | Used for |
-| --- | --- | --- | --- |
-| Simple-Scene Building-Hvac (IFC4.3) | buildingSMART/Sample-Test-Files | SketchUp IFC manager | topology |
-| Simple-Scene Infra-Plumbing (IFC4.3) | buildingSMART/Sample-Test-Files | SketchUp IFC manager | topology |
-| Duplex_MEP_20110907 | buildingsmart-community/Community-Sample-Test-Files | Autodesk Revit MEP 2011 | topology, identity |
-| Duplex_Electrical_20121207 | buildingsmart-community/Community-Sample-Test-Files | Autodesk Revit 2013 | topology |
-| Duplex_Plumbing_20121113 | buildingsmart-community/Community-Sample-Test-Files | Autodesk Revit 2013 | topology, identity, round trip |
-| Clinic_HVAC | buildingsmart-community/Community-Sample-Test-Files | Autodesk Revit MEP 2013 | topology, identity |
-| Clinic_Plumbing | buildingsmart-community/Community-Sample-Test-Files | Autodesk Revit 2013 | topology |
+| Distribution elements | PC | Components | LC | SM |
+| ---: | ---: | ---: | ---: | ---: |
+| 498 | 0.98 | 20 | 0.47 | 0.00 |
 
-The IFC files are not redistributed here. `data/download.py` fetches them from the original repositories; please check the licence terms there before reusing the models. The community files are stored with Git LFS, so the script downloads them through `media.githubusercontent.com`.
+These checks validate specific calculations and supplied artifacts. They do not establish universal exporter performance or a deployment-ready digital twin.
 
-## Main results
+- The study uses a small set of sample/exported IFC models and simulated revisions, rather than consecutive real authoring-tool revisions.
+- Binding validity is simulated; the models do not include a live BMS point list.
+- Figures 1–3 and 7 are conceptual diagrams or proposed work. IDS, BOT/Brick and BCF stages in Figure 3 are not implemented integrations.
+- Exact Tag matching assumes unique keys; hard class/container partitions can reject legitimate changes. The assignment gate is applied after optimization.
+- Multiple graph components may be legitimate separate networks. Default app thresholds need project-specific interpretation.
+- Geometry extraction excludes elements with no returned geometry. Clear Streamlit's cache if you replace a model at the same path.
+- Dependencies have version ranges, not a lockfile. Fixed seeds alone do not guarantee identical results across every dependency version.
 
-Topology (Section 5.2): system membership and connectivity are unrelated. The samples have systems but no ports, the 2012 Revit exports have near-complete port networks and no IfcSystem, and two exports have neither.
+## Repository map
 
-| Model | Distribution elements | PC | Components | LC | SM |
-| --- | --- | --- | --- | --- | --- |
-| Simple-Scene HVAC | 3 | 0.00 | 3 | 0.33 | 1.00 |
-| Simple-Scene Plumbing | 26 | 0.00 | 26 | 0.04 | 1.00 |
-| Duplex MEP (2011) | 926 | 0.00 | 926 | 0.00 | 0.00 |
-| Duplex Electrical | 99 | 0.00 | 99 | 0.01 | 0.00 |
-| Duplex Plumbing | 498 | 0.98 | 20 | 0.47 | 0.00 |
-| Clinic HVAC | 3,704 | 1.00 | 13 | 0.94 | 0.00 |
-| Clinic Plumbing | 6,587 | 0.97 | 176 | 0.95 | 0.00 |
+| Path | Role |
+| --- | --- |
+| `it2/` | Fingerprints, topology metrics, matching, simulation and scoring |
+| `scripts/01_topology.py`–`07_figures.py` | Original paper experiment and rendering stages |
+| `scripts/reproduce_study.py` | Protected reproduction and numerical comparison |
+| `app/` | Checker and provenance/reproduction page |
+| `data/download.py` | Public model download locations |
+| `data/features/` | Supplied geometry fingerprints |
+| `results/`, `figures/` | Paper snapshot |
+| `environment.yml`, `requirements.txt` | Environment specification |
 
-Identity (Section 5.3), recall with 30 percent of elements recreated, 20 seeds:
+## Data, citation and ownership
 
-| Model | Tag key | Placement only | IT2 hybrid |
-| --- | --- | --- | --- |
-| Clinic HVAC | 0.699 | 0.584 | 0.999 |
-| Duplex MEP | 0.699 | 0.982 | 0.999 |
-| Duplex Plumbing | 0.700 | 0.576 | 0.999 |
+Model sources are [buildingSMART Sample-Test-Files](https://github.com/buildingSMART/Sample-Test-Files) and [Community-Sample-Test-Files](https://github.com/buildingsmart-community/Community-Sample-Test-Files). The downloader uses the media endpoint for community files stored through Git LFS. Check each source repository's terms before reuse; the code license does not grant rights to the IFC models.
 
-Placement-only matching fails on the 2012 exports because nearly every flow segment shares its placement origin with another segment (1,547 of 1,548 in Clinic HVAC). The file-level round trip reproduces the simulated results within 0.03.
+Code copyright: **Abdullah Al Foysal**, distributed under the [MIT license](LICENSE). Use GitHub's **Cite this repository** control or [CITATION.cff](CITATION.cff). No paper DOI or publication status is asserted here.
 
-## Using the library on your own models
-
-```python
-import ifcopenshell
-from it2.topology import topology_metrics
-from it2.features import extract_features, load_features
-from it2.matching import match_hybrid
-
-print(topology_metrics("my_model.ifc"))
-
-old = load_features(extract_features(ifcopenshell.open("model_v1.ifc")))
-new = load_features(extract_features(ifcopenshell.open("model_v2.ifc")))
-pairs = match_hybrid(old, new, lam=0.3, tau=0.5)       # list of (index in old, index in new)
-mapping = {old[i]["g"]: new[j]["g"] for i, j in pairs}  # old GlobalId -> new GlobalId
-unmatched = len(new) - len(pairs)                        # candidates for manual review
-```
-
-`tau` is the rejection gate in metres. Lower values favour precision, higher values favour recall (see Figure 6). Unmatched elements are meant to go to a person, not to be guessed.
-
-## Scope
-
-Clinic Plumbing (6,587 elements) is used for the topology audit only; its geometry extraction is slow, so the identity experiments use Clinic HVAC, Duplex MEP and Duplex Plumbing. You can add it with `python 02_extract_features.py Clinic_Plumbing` and `python 03_identity.py Clinic_Plumbing`.
-
-This is a controlled study. Revisions are simulated on real models so that ground truth is known; the file-level round trip checks that the simulation is fair, but it does not replace consecutive exports from an authoring tool. Binding validity is simulated because none of the models ships with a BMS point list. See Section 7 of the paper.
-
-## Citation
-
-See `CITATION.cff`. Please also cite the buildingSMART repositories if you use the models.
-
-## Licence
-
-Code: MIT. The IFC models belong to their respective owners and are not part of this repository.
+For a problem report, include your operating system, package versions, exact command, traceback and reproduction report where available. For changes to experiment logic, preserve the paper snapshot and explain any numerical differences. See [CONTRIBUTING.md](CONTRIBUTING.md).

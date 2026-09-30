@@ -61,6 +61,7 @@ def main():
         parser.error("Output must be outside the repository and cannot contain it")
     if output.exists():
         parser.error("Output already exists; choose a new folder to preserve prior runs")
+    # Fingerprint protected inputs before running anything; compare them again at completion.
     before = snapshot(ROOT)
     output.mkdir(parents=True)
     work = output / "workspace"
@@ -88,6 +89,7 @@ def main():
         p.write_text(text.replace(old, 'pathlib.Path(__import__("tempfile").gettempdir())'), encoding="utf-8")
         adaptations = ["Windows-safe model basename in copied topology.py",
                        "OS temporary directory in copied 05_roundtrip.py"]
+    # Scope determines exactly which stages are rerun; reused results are not claimed as validated.
     commands = []
     if args.mode == "raw-ifc":
         commands += [["data/download.py"], ["scripts/01_topology.py"],
@@ -126,6 +128,7 @@ def main():
         for command in commands:
             print("RUN:", sys.executable, *command, flush=True)
             subprocess.run([sys.executable, *command], cwd=work, env=env, check=True)
+        # Compare only outputs produced by this run, using tight numerical tolerances.
         generated = {Path(command[0]).name for command in commands}
         names = []
         if "01_topology.py" in generated:
@@ -150,6 +153,7 @@ def main():
         report["completed"] = False
         report["error"] = str(exc)
         raise
+    # Even a failed job writes its report, so the failure and preservation check are inspectable.
     finally:
         report["original_files_unchanged"] = snapshot(ROOT) == before
         (output / "reproduction_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

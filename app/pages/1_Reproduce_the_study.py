@@ -22,6 +22,7 @@ st.markdown("**Identity:** the experimental hybrid first matches class and Tag, 
 st.latex(r"C_{ij}=\|c_i-c_j\|_2+\|d_i-d_j\|_1+\lambda\,\mathbf{1}[t_i\ne t_j],\qquad C_{ij}\le\tau")
 st.caption("The simulator preserves each surviving element's dimensions and type name, adds small position noise, moves selected elements, changes selected Tags, deletes elements and adds decoys. These assumptions limit what the results establish.")
 
+# Keep evidence type beside each figure: diagrams, experiments and proposed work differ.
 FIGURES = [
     ("f1_loops.png", "Conceptual", "Problem feedback loops", "Authored diagram; not calculated from experimental measurements", ["scripts/07_figures.py"]),
     ("f2_design.png", "Conceptual", "Research design", "Authored design diagram describing the study", ["scripts/07_figures.py"]),
@@ -59,6 +60,7 @@ label = st.selectbox("Reproduction scope", list(choices))
 st.caption("Rendering does not validate experiments. Fingerprint mode recalculates identity, sensitivity, binding validity and round-trip evaluation, but reuses saved fingerprints and file-level round-trip records. Raw mode includes downloads, geometry extraction and new file-level revisions, and can take substantially longer.")
 active = st.session_state.get("it2_reproduction")
 running = active is not None and active["process"].poll() is None
+# The experiment runs in a child process so the app stays responsive.
 if st.button("Run selected stages in a separate folder", type="primary", disabled=running):
     output = ROOT.parent / "it2-reproduction" / dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -82,6 +84,7 @@ if active:
     st.button("Refresh run status")
     log = active["log"].read_text(encoding="utf-8", errors="replace")
     st.code(log[-15000:], language="text")
+    # Show the machine-readable audit alongside the log; do not silently replace paper outputs.
     report = active["output"] / "reproduction_report.json"
     if report.exists():
         raw = report.read_bytes()

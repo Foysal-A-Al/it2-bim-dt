@@ -26,11 +26,13 @@ def main():
         dest = OUT / name
         if dest.exists() and dest.stat().st_size > 10_000:
             print("exists  ", name); continue
+        # Encode spaces in repository paths; the host/root URL remains unchanged.
         base, path = url.split("/main/", 1)
         full = base + "/main/" + urllib.parse.quote(path)
         print("fetching", name)
         urllib.request.urlretrieve(full, dest)
         head = dest.read_bytes()[:200]
+        # Reject Git LFS pointers or HTML responses before treating the download as an IFC.
         if not head.startswith(b"ISO-10303-21"):
             raise RuntimeError(f"{name}: not an IFC file (Git LFS pointer?). Check the URL.")
     print("done:", OUT)
