@@ -71,7 +71,7 @@ streamlit run app/app.py
 docker compose up -d --build
 ```
 
-Open **http://localhost:8503**. Docker downloads the seven study models into a separate volume; the original paper outputs remain unchanged. To create a temporary public demo, run `docker compose --profile share up -d share` and read the generated URL with `docker compose logs share`. The link requires the host to remain online. See [DOCKER.md](DOCKER.md) for lifecycle, reproduction and permanent-hosting details.
+Open **http://127.0.0.1:8501**. Docker downloads the seven study models into a separate volume; the original paper outputs remain unchanged. The single `it2-checker` container also starts the temporary public tunnel; read its generated HTTPS URL in Docker Desktop Logs or with `docker compose logs checker`. The link requires the host to remain online. See [DOCKER.md](DOCKER.md) for lifecycle, reproduction and permanent-hosting details.
 
 ## Method
 

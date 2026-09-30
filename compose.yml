@@ -1,30 +1,16 @@
 name: it2-bim-dt
 services:
-  study-models:
-    image: it2-bim-dt:local
-    build: .
-    command: ["python", "data/download.py"]
-    healthcheck:
-      disable: true
-    read_only: true
-    tmpfs:
-      - /tmp
-    volumes:
-      - study-ifc:/workspace/it2-bim-dt/data/ifc
-    restart: "no"
-
   checker:
+    container_name: it2-checker
     image: it2-bim-dt:local
     build: .
-    depends_on:
-      study-models:
-        condition: service_completed_successfully
     ports:
-      - "127.0.0.1:8503:8501"
+      - "127.0.0.1:8501:8501"
     environment:
       IT2_PUBLIC_DEMO: "1"
+      IT2_SHARE: "1"
     volumes:
-      - study-ifc:/workspace/it2-bim-dt/data/ifc:ro
+      - study-ifc:/workspace/it2-bim-dt/data/ifc
       - reproduction:/workspace/it2-reproduction
     read_only: true
     tmpfs:
@@ -34,16 +20,6 @@ services:
     mem_limit: 2g
     init: true
     restart: unless-stopped
-
-  share:
-    image: cloudflare/cloudflared:latest
-    profiles: [share]
-    command: ["tunnel", "--no-autoupdate", "--url", "http://checker:8501"]
-    depends_on:
-      checker:
-        condition: service_healthy
-    restart: unless-stopped
-
 volumes:
   study-ifc:
   reproduction:

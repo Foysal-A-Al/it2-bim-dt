@@ -1,3 +1,4 @@
+FROM cloudflare/cloudflared:2026.9.3 AS tunnel
 FROM python:3.11-slim-bookworm
 
 # IFC geometry and scientific wheels need these shared libraries on Debian.
@@ -21,8 +22,10 @@ RUN useradd --create-home --uid 1000 it2 \
     && mkdir -p /workspace/it2-reproduction /workspace/it2-bim-dt/data/ifc \
     && chown -R it2:it2 /workspace
 COPY --chown=it2:it2 . .
+COPY --from=tunnel /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 USER it2
 EXPOSE 8501
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"
+ENTRYPOINT ["python", "docker/start.py"]
 CMD ["python", "-m", "streamlit", "run", "app/app.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true", "--server.maxUploadSize=100"]

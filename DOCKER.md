@@ -7,14 +7,14 @@ Docker packages the same Python library, paper files and Streamlit checker. It d
 From the repository root:
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 docker compose ps
-docker compose logs study-models
+docker compose logs checker
 ```
 
-On Windows you can also run `run_docker_windows.bat`. Open **http://localhost:8503**. This separate port leaves the PyCharm instance on 8502 unaffected.
+On Windows you can also run `run_docker_windows.bat`. Open **http://127.0.0.1:8501**. Docker Desktop shows one application container, `it2-checker`, with clickable port 8501. Stop any other app using host port 8501 first.
 
-The downloader runs once before the checker starts. IFC models are stored in a named Docker volume and are excluded from the image build and Git. Existing models are reused according to the original download script. Paper results and figures stay inside the read-only application image.
+The container runs the downloader before starting Streamlit; existing models are reused on later starts. IFC models are stored in a named Docker volume and are excluded from the image build and Git. Existing models are reused according to the original download script. Paper results and figures stay inside the read-only application image.
 
 The app runs as a non-root user, with a writable temporary directory and a separate reproduction volume. The default demo configuration disables expensive experiment-launch buttons; provenance, figures, model uploads and the topology/identity checker remain available. Uploads are limited to 100 MB per file. The public demo is not a confidential data-sharing service: users should only upload models they are permitted to share with its operator.
 
@@ -31,24 +31,19 @@ Outputs go to the separate reproduction volume; the paper snapshot is preserved.
 ## Temporary public demo
 
 ```bash
-docker compose --profile share up -d share
-docker compose logs share
+docker compose logs checker
 ```
 
-The official Cloudflare connector prints a generated HTTPS `trycloudflare.com` URL. The link changes when a new tunnel is created and works only while the PC, Docker and tunnel remain running. This is a development/demo link, not permanent hosting. No inbound router port needs to be opened; the connector proxies to the checker on Docker's private network.
+With `IT2_SHARE: "1"`, the official Cloudflare connector runs inside the same container and prints a generated HTTPS `trycloudflare.com` URL. The link changes when a new tunnel is created and works only while the PC, Docker and tunnel remain running. This is a development/demo link, not permanent hosting. No inbound router port needs to be opened; the connector proxies to Streamlit inside the same container.
 
-Stop sharing while keeping the local app running:
-
-```bash
-docker compose --profile share stop share
-```
+To disable sharing, set `IT2_SHARE` to `0` in Compose and run `docker compose up -d`. Recreating the container generates a new demo URL when sharing is enabled again.
 
 ## Stop or update
 
 ```bash
-docker compose --profile share down
+docker compose down
 git pull
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 ```
 
 `down` retains the named volumes. Avoid `down -v` unless you intend to delete the downloaded models and reproduction outputs.
